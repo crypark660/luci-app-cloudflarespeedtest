@@ -15,7 +15,7 @@ disable_proxy() {
 	# PassWall2: clash xray v2ray sing-box
 	_disable_proxy "passwall2" "/etc/config/passwall2" "passwall2.@global[0].enabled" "passwall2" "clash xray v2ray sing-box"
 	# OpenClash: clash
-	_disable_proxy "openclash" "/etc/config/openclash" "openclash.config.enabled" "openclash" "clash"
+	_disable_proxy "openclash" "/etc/config/openclash" "openclash.config.enable" "openclash" "clash"
 	# SSR-Plus (shadowsocksr): ssr-redir ss-local ss-redir shadowsocksr
 	_disable_proxy "ssrplus" "/etc/config/shadowsocksr" "shadowsocksr.@global[0].enabled" "shadowsocksr" "ssr-redir ss-local ss-redir shadowsocksr"
 	# Nikki: clash ssr sing-box xray
@@ -54,13 +54,23 @@ _disable_proxy() {
 		[ "$uci_enabled" = "1" ] && uci_enabled="1"
 	fi
 
-	# Check process
-	for pname in $process_names; do
-		if pgrep -x "$pname" >/dev/null 2>&1; then
-			process_running="1"
-			break
-		fi
-	done
+        # Check process
+        if [ "$state_name" = "openclash" ]; then
+                for pid in /proc/[0-9]*; do
+                        [ -r "$pid/comm" ] || continue
+                        if [ "$(cat "$pid/comm" 2>/dev/null)" = "clash" ]; then
+                                process_running="1"
+                                break
+                        fi
+                done
+        else
+                for pname in $process_names; do
+                        if pgrep -x "$pname" >/dev/null 2>&1; then
+                                process_running="1"
+                                break
+                        fi
+                done
+        fi
 
 	# Skip if neither UCI nor process detected
 	if [ "$uci_enabled" != "1" ] && [ "$process_running" = "0" ]; then
@@ -109,7 +119,7 @@ restore_proxy() {
 				echolog "  Restored: PassWall2"
 				;;
 			openclash)
-				uci set openclash.config.enabled="1"
+				uci set openclash.config.enable="1"
 				uci commit openclash
 				/etc/init.d/openclash start 2>/dev/null
 				echolog "  Restored: OpenClash"
