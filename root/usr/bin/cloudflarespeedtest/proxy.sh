@@ -118,12 +118,32 @@ restore_proxy() {
 				/etc/init.d/passwall2 start 2>/dev/null
 				echolog "  Restored: PassWall2"
 				;;
-			openclash)
-				uci set openclash.config.enable="1"
-				uci commit openclash
-				/etc/init.d/openclash start 2>/dev/null
-				echolog "  Restored: OpenClash"
-				;;
+                        openclash)
+                                uci set openclash.config.enable="1"
+                                uci commit openclash
+                                /etc/init.d/openclash start 2>/dev/null
+                                echolog "  Restored: OpenClash"
+
+                                # Wait until OpenClash network is actually ready
+                                local ready=0
+                                local i
+
+                                for i in 1 2 3 4 5 6 7 8 9 10
+                                do
+                                        if curl -4 -fsS --connect-timeout 3 https://api.telegram.org >/dev/null 2>&1; then
+                                                ready=1
+                                                echolog "  OpenClash network is ready"
+                                                break
+                                        fi
+
+                                        echolog "  Waiting for OpenClash network... ($i/10)"
+                                        sleep 2
+                                done
+
+                                if [ "$ready" = "0" ]; then
+                                        echolog "  Warning: OpenClash network not ready after 20 seconds"
+                                fi
+                                ;;
 			ssrplus)
 				uci set shadowsocksr.@global[0].enabled="1"
 				uci commit shadowsocksr
